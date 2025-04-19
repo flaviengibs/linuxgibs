@@ -30,6 +30,7 @@
       flex: 1;
       font-family: monospace;
       font-size: 1rem;
+      color: #0f0;
     }
     .modal {
       position: fixed;
@@ -101,7 +102,7 @@
 
       const prompt = document.createElement("span");
       prompt.className = "prompt";
-      prompt.textContent = `user@fakeOS:${currentPath.join("/")}$`;  <!-- Fixed backtick issue -->
+      prompt.textContent = `user@fakeOS:${currentPath.join("/")}$`;
       prompt.style.color = document.body.style.color;
 
       const input = document.createElement("input");
@@ -112,6 +113,8 @@
       line.appendChild(prompt);
       line.appendChild(input);
       terminal.appendChild(line);
+
+      // Donne le focus sur l'input chaque fois que le prompt est affiché
       input.focus();
       terminal.scrollTop = terminal.scrollHeight;
     }
@@ -120,14 +123,16 @@
       if (e.key === "Enter") {
         const input = e.target;
         const commandText = input.value.trim();
+        if (commandText === "") return;  // Empêche d'exécuter une commande vide
+
         const output = document.createElement("div");
         output.textContent = `\n$ ${commandText}`;
         terminal.appendChild(output);
 
         executeCommand(commandText);
 
-        input.disabled = true;
-        renderPrompt();
+        input.disabled = true; // Désactive le champ d'entrée une fois la commande exécutée
+        renderPrompt(); // Affiche un nouveau prompt
       }
     }
 
