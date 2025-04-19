@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Linux Terminal Simulator</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: monospace;
+      background-color: #000;
+      color: #0f0;
+    }
+    #terminal {
+      padding: 1rem;
+      white-space: pre-wrap;
+      height: 100vh;
+      overflow-y: auto;
+    }
+    .input-line {
+      display: flex;
+    }
+    .prompt {
+      margin-right: 0.5rem;
+    }
+    input {
+      background: none;
+      border: none;
+      outline: none;
+      color: #0f0;
+      flex: 1;
+      font-family: monospace;
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="terminal"></div>
+  <script>
+    const terminal = document.getElementById("terminal");
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+    let currentPath = ["/"];
+
+    let fileSystem = {
+      type: "dir",
+      name: "/",
+      children: []
+    };
+
+    function getCurrentDir() {
+      let dir = fileSystem;
+      for (let i = 1; i < currentPath.length; i++) {
+        dir = dir.children.find(c => c.name === currentPath[i] && c.type === "dir");
+        if (!dir) return null;
+      }
+      return dir;
+    }
+
+    function renderPrompt() {
+      const line = document.createElement("div");
+      line.className = "input-line";
+
+      const prompt = document.createElement("span");
+      prompt.className = "prompt";
+      prompt.textContent = `user@fakeOS:${currentPath.join("/")}$`;
+
+      const input = document.createElement("input");
+      input.autofocus = true;
+      input.addEventListener("keydown", handleCommand);
+
+      line.appendChild(prompt);
+      line.appendChild(input);
+      terminal.appendChild(line);
+      input.focus();
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    function handleCommand(e) {
+      if (e.key === "Enter") {
+        const input = e.target;
+        const commandText = input.value.trim();
+        const output = document.createElement("div");
+        output.textContent = `\n$ ${commandText}`;
+        terminal.appendChild(output);
+
+        executeCommand(commandText);
+
+        input.disabled = true;
+        renderPrompt();
+      }
+    }
+
+    function executeCommand(cmd) {
+      const [command, ...args] = cmd.split(" ");
+      const currentDir = getCurrentDir();
+      if (!currentDir) return;
+
+      switch (command) {
+        case "ls": {
+          const items = currentDir.children.map(c => c.name).join("  ");
+          terminal.append(`\n${items}`);
+          break;
+        }
+        case "cd": {
+          const target = args[0];
+          if (!target || target === "/") {
+            currentPath = ["/"];
+          } else if (target === "..") {
+            if (currentPath.length > 1) currentPath.pop();
+          } else {
+            const dir = currentDir.children.find(c => c.name === target && c.type === "dir");
+            if (dir) currentPath.push(target);
+            else terminal.append("\nNo such directory.");
+          }
+          break;
+        }
+        case "mkdir": {
+          const name = args[0];
+          if (!name) break;
+          if (currentDir.children.some(c => c.name === name)) {
+            terminal.append("\nDirectory already exists.");
+          } else {
+            currentDir.children.push({ type: "dir", name, children: [] });
+          }
+          break;
+        }
+        case "touch": {
+          const name = args[0];
+          if (!name || !name.endsWith(".txt")) {
+            terminal.append("\nOnly .txt files are supported.");
+            break;
+          }
+          if (currentDir.children.some(c => c.name === name)) {
+            terminal.append("\nFile already exists.");
+          } else {
+            currentDir.children.push({ type: "file", name, content: "", size: 0 });
+          }
+          break;
+        }
+        case "cat": {
+          const name = args[0];
+          const file = currentDir.children.find(c => c.name === name && c.type === "file");
+          if (file) {
+            terminal.append(`\n${file.content}`);
+          } else {
+            terminal.append("\nFile not found.");
+          }
+          break;
+        }
+        case "echo": {
+          const [text, , fileName] = cmd.split(/\s+>>\s+/);
+          const file = currentDir.children.find(c => c.name === fileName && c.type === "file");
+          if (file) {
+            const newSize = new Blob([file.content + text]).size;
+            if (newSize <= MAX_FILE_SIZE) {
+              file.content += text;
+              file.size = newSize;
+            } else {
+              terminal.append("\nFile exceeds 5MB limit.");
+            }
+          } else {
+            terminal.append("\nTarget file not found.");
+          }
+          break;
+        }
+        case "clear": {
+          terminal.innerHTML = "";
+          break;
+        }
+        case "help": {
+          terminal.append("\nCommands: ls, cd, mkdir, touch, cat, echo, clear, help");
+          break;
+        }
+        default:
+          terminal.append("\nCommand not found.");
+      }
+    }
+
+    // Init
+    terminal.append("Welcome to the Linux Terminal Simulator! Type 'help' for a list of commands.\n");
+    renderPrompt();
+  </script>
+</body>
+</html>
