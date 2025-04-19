@@ -27,7 +27,6 @@
       background: none;
       border: none;
       outline: none;
-      color: #0f0;
       flex: 1;
       font-family: monospace;
       font-size: 1rem;
@@ -76,7 +75,16 @@
       children: []
     };
 
-    const builtInCommands = ["ls", "pwd", "cd", "mkdir", "rmdir", "touch", "cat", "nano", "echo", "rm", "tree", "color", "clear", "help", "mv", "cp", "ln", "uname", "whoami", "which"];
+    const defaultTextColor = "#0f0";
+    const colorMap = {
+      green: "#0f0",
+      red: "#f00",
+      yellow: "#ff0",
+      blue: "#00f",
+      white: "#fff",
+      cyan: "#0ff",
+      magenta: "#f0f"
+    };
 
     function getCurrentDir() {
       let dir = fileSystem;
@@ -87,28 +95,17 @@
       return dir;
     }
 
-    function ensureBinDirectory() {
-      let bin = fileSystem.children.find(c => c.name === "bin" && c.type === "dir");
-      if (!bin) {
-        bin = { type: "dir", name: "bin", children: [] };
-        fileSystem.children.push(bin);
-      }
-      builtInCommands.forEach(cmd => {
-        if (!bin.children.find(f => f.name === cmd && f.type === "file")) {
-          bin.children.push({ type: "file", name: cmd, content: `#!/bin/bash\necho ${cmd} simulated`, size: 0 });
-        }
-      });
-    }
-
     function renderPrompt() {
       const line = document.createElement("div");
       line.className = "input-line";
 
       const prompt = document.createElement("span");
       prompt.className = "prompt";
-      prompt.textContent = `user@fakeOS:${currentPath.join("/")}$`;
+      prompt.textContent = `user@fakeOS:${currentPath.join("/")}$`;  <!-- Fixed backtick issue -->
+      prompt.style.color = document.body.style.color;
 
       const input = document.createElement("input");
+      input.style.color = document.body.style.color;
       input.autofocus = true;
       input.addEventListener("keydown", handleCommand);
 
@@ -136,16 +133,11 @@
 
     function findEntry(name, type) {
       const dir = getCurrentDir();
-      return dir ? dir.children.find(c => c.name === name && (!type || c.type === type)) : null;
+      return dir.children.find(c => c.name === name && (!type || c.type === type));
     }
 
-    function findInPath(cmd) {
-      const bin = fileSystem.children.find(c => c.name === "bin" && c.type === "dir");
-      if (bin) {
-        const entry = bin.children.find(f => f.name === cmd && f.type === "file");
-        if (entry) return "/bin/" + entry.name;
-      }
-      return null;
+    function simulateCommand(name, defaultOutput) {
+      terminal.append("\n" + (defaultOutput || `${name}: not implemented in this simulation.`));
     }
 
     function executeCommand(cmd) {
@@ -295,20 +287,17 @@
             }
             return result;
           }
-          terminal.append("\n" + buildTree(currentDir));
-          break;
-        }
-        case "which": {
-          const prog = args[0];
-          const path = findInPath(prog);
-          if (path) terminal.append("\n" + path);
-          else terminal.append("\nnot found");
+          terminal.append("\n" + buildTree(getCurrentDir()));
           break;
         }
         case "color": {
-          const color = args[0];
-          document.body.backgroundColor = color;
-          terminal.append(`\nText color set to ${color}`);
+          const color = args[0]?.toLowerCase();
+          if (colorMap[color]) {
+            document.body.style.color = colorMap[color];
+            terminal.append(`\nText color set to ${color}`);
+          } else {
+            terminal.append("\nInvalid color. Available: " + Object.keys(colorMap).join(", "));
+          }
           break;
         }
         case "clear": {
@@ -316,45 +305,20 @@
           break;
         }
         case "help": {
-          terminal.append("\nCommands: " + builtInCommands.join(", "));
+          terminal.append("\nCommands: ls, pwd, cd, mkdir, rmdir, touch, cat, nano, echo >> file.txt, rm, tree, color, clear, help");
           break;
         }
-        case "mv": {
-          const [src, dest] = args;
-          const file = findEntry(src);
-          if (!file) {
-            terminal.append("\nSource not found.");
-          } else {
-            file.name = dest;
-          }
-          break;
-        }
-        case "cp": {
-          const [src, dest] = args;
-          const file = findEntry(src);
-          if (!file || file.type !== "file") {
-            terminal.append("\nSource file not found.");
-          } else {
-            currentDir.children.push({ ...file, name: dest });
-          }
-          break;
-        }
-        case "ln": {
-          const [target, link] = args;
-          const file = findEntry(target);
-          if (!file) {
-            terminal.append("\nTarget not found.");
-          } else {
-            currentDir.children.push({ ...file, name: link });
-          }
-          break;
-        }
+        case "mv":
+        case "cp":
+        case "ln":
+        case "less":
+        case "man":
         case "uname": {
-          terminal.append("\nLinux fakeOS 1.0.0 x86_64");
+          simulateCommand(command, "Linux fakeOS 1.0.0 x86_64");
           break;
         }
         case "whoami": {
-          terminal.append("\nuser");
+          simulateCommand(command, "user");
           break;
         }
         default:
@@ -363,7 +327,6 @@
     }
 
     terminal.append("Welcome to the Linux Terminal Simulator! Type 'help' for a list of commands.\n");
-    ensureBinDirectory();
     renderPrompt();
   </script>
 </body>
