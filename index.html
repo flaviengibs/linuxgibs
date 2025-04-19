@@ -32,21 +32,51 @@
       font-family: monospace;
       font-size: 1rem;
     }
+    .modal {
+      position: fixed;
+      top: 10%;
+      left: 10%;
+      width: 80%;
+      height: 70%;
+      background: #111;
+      border: 2px solid #0f0;
+      z-index: 10;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal textarea {
+      flex: 1;
+      background: #000;
+      color: #0f0;
+      border: none;
+      resize: none;
+      font-family: monospace;
+    }
+    .modal button {
+      margin-top: 1rem;
+      padding: 0.5rem;
+      background: #0f0;
+      color: #000;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
   <div id="terminal"></div>
   <script>
     const terminal = document.getElementById("terminal");
-    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-
+    const MAX_FILE_SIZE = 5 * 1024 * 1024;
     let currentPath = ["/"];
-
     let fileSystem = {
       type: "dir",
       name: "/",
       children: []
     };
+
+    const builtInCommands = ["ls", "pwd", "cd", "mkdir", "rmdir", "touch", "cat", "nano", "echo", "rm", "tree", "color", "clear", "help", "mv", "cp", "ln", "uname", "whoami", "which"];
 
     function getCurrentDir() {
       let dir = fileSystem;
@@ -55,6 +85,19 @@
         if (!dir) return null;
       }
       return dir;
+    }
+
+    function ensureBinDirectory() {
+      let bin = fileSystem.children.find(c => c.name === "bin" && c.type === "dir");
+      if (!bin) {
+        bin = { type: "dir", name: "bin", children: [] };
+        fileSystem.children.push(bin);
+      }
+      builtInCommands.forEach(cmd => {
+        if (!bin.children.find(f => f.name === cmd && f.type === "file")) {
+          bin.children.push({ type: "file", name: cmd, content: `#!/bin/bash\necho ${cmd} simulated`, size: 0 });
+        }
+      });
     }
 
     function renderPrompt() {
@@ -91,6 +134,20 @@
       }
     }
 
+    function findEntry(name, type) {
+      const dir = getCurrentDir();
+      return dir ? dir.children.find(c => c.name === name && (!type || c.type === type)) : null;
+    }
+
+    function findInPath(cmd) {
+      const bin = fileSystem.children.find(c => c.name === "bin" && c.type === "dir");
+      if (bin) {
+        const entry = bin.children.find(f => f.name === cmd && f.type === "file");
+        if (entry) return "/bin/" + entry.name;
+      }
+      return null;
+    }
+
     function executeCommand(cmd) {
       const [command, ...args] = cmd.split(" ");
       const currentDir = getCurrentDir();
@@ -100,6 +157,10 @@
         case "ls": {
           const items = currentDir.children.map(c => c.name).join("  ");
           terminal.append(`\n${items}`);
+          break;
+        }
+        case "pwd": {
+          terminal.append(`\n${currentPath.join("/")}`);
           break;
         }
         case "cd": {
@@ -118,7 +179,7 @@
         case "mkdir": {
           const name = args[0];
           if (!name) break;
-          if (currentDir.children.some(c => c.name === name)) {
+          if (findEntry(name)) {
             terminal.append("\nDirectory already exists.");
           } else {
             currentDir.children.push({ type: "dir", name, children: [] });
@@ -131,7 +192,7 @@
             terminal.append("\nOnly .txt files are supported.");
             break;
           }
-          if (currentDir.children.some(c => c.name === name)) {
+          if (findEntry(name)) {
             terminal.append("\nFile already exists.");
           } else {
             currentDir.children.push({ type: "file", name, content: "", size: 0 });
@@ -140,28 +201,114 @@
         }
         case "cat": {
           const name = args[0];
-          const file = currentDir.children.find(c => c.name === name && c.type === "file");
-          if (file) {
-            terminal.append(`\n${file.content}`);
+          const file = findEntry(name, "file");
+          if (file) terminal.append(`\n${file.content}`);
+          else terminal.append("\nFile not found.");
+          break;
+        }
+        case "nano": {
+          const name = args[0];
+          const file = findEntry(name, "file");
+          if (!file) {
+            terminal.append("\nFile not found.");
+            return;
+          }
+          const modal = document.createElement("div");
+          modal.className = "modal";
+
+          const textarea = document.createElement("textarea");
+          textarea.value = file.content;
+
+          const saveButton = document.createElement("button");
+          saveButton.textContent = "Save";
+          saveButton.onclick = () => {
+            const newSize = new Blob([textarea.value]).size;
+            if (newSize <= MAX_FILE_SIZE) {
+              file.content = textarea.value;
+              file.size = newSize;
+              modal.remove();
+            } else {
+              alert("File exceeds 5MB limit.");
+            }
+          };
+
+          modal.appendChild(textarea);
+          modal.appendChild(saveButton);
+          document.body.appendChild(modal);
+          break;
+        }
+        case "echo": {
+          const match = cmd.match(/echo\s+(.+)\s+>>\s+(.+)/);
+          if (match) {
+            const text = match[1];
+            const fileName = match[2];
+            const file = findEntry(fileName, "file");
+            if (file) {
+              const newSize = new Blob([file.content + text]).size;
+              if (newSize <= MAX_FILE_SIZE) {
+                file.content += text;
+                file.size = newSize;
+              } else {
+                terminal.append("\nFile exceeds 5MB limit.");
+              }
+            } else {
+              terminal.append("\nTarget file not found.");
+            }
+          } else {
+            terminal.append("\nInvalid echo syntax. Use: echo [text] >> [file.txt]");
+          }
+          break;
+        }
+        case "rm": {
+          const name = args[0];
+          const index = currentDir.children.findIndex(c => c.name === name && c.type === "file");
+          if (index !== -1) {
+            currentDir.children.splice(index, 1);
           } else {
             terminal.append("\nFile not found.");
           }
           break;
         }
-        case "echo": {
-          const [text, , fileName] = cmd.split(/\s+>>\s+/);
-          const file = currentDir.children.find(c => c.name === fileName && c.type === "file");
-          if (file) {
-            const newSize = new Blob([file.content + text]).size;
-            if (newSize <= MAX_FILE_SIZE) {
-              file.content += text;
-              file.size = newSize;
+        case "rmdir": {
+          const name = args[0];
+          const index = currentDir.children.findIndex(c => c.name === name && c.type === "dir");
+          if (index !== -1) {
+            if (currentDir.children[index].children.length === 0) {
+              currentDir.children.splice(index, 1);
             } else {
-              terminal.append("\nFile exceeds 5MB limit.");
+              terminal.append("\nDirectory not empty.");
             }
           } else {
-            terminal.append("\nTarget file not found.");
+            terminal.append("\nDirectory not found.");
           }
+          break;
+        }
+        case "tree": {
+          function buildTree(dir, prefix = "") {
+            let result = `${prefix}${dir.name}/\n`;
+            for (let child of dir.children) {
+              if (child.type === "dir") {
+                result += buildTree(child, prefix + "  ");
+              } else {
+                result += `${prefix}  ${child.name}\n`;
+              }
+            }
+            return result;
+          }
+          terminal.append("\n" + buildTree(currentDir));
+          break;
+        }
+        case "which": {
+          const prog = args[0];
+          const path = findInPath(prog);
+          if (path) terminal.append("\n" + path);
+          else terminal.append("\nnot found");
+          break;
+        }
+        case "color": {
+          const color = args[0];
+          document.body.style.color = color;
+          terminal.append(`\nText color set to ${color}`);
           break;
         }
         case "clear": {
@@ -169,7 +316,45 @@
           break;
         }
         case "help": {
-          terminal.append("\nCommands: ls, cd, mkdir, touch, cat, echo, clear, help");
+          terminal.append("\nCommands: " + builtInCommands.join(", "));
+          break;
+        }
+        case "mv": {
+          const [src, dest] = args;
+          const file = findEntry(src);
+          if (!file) {
+            terminal.append("\nSource not found.");
+          } else {
+            file.name = dest;
+          }
+          break;
+        }
+        case "cp": {
+          const [src, dest] = args;
+          const file = findEntry(src);
+          if (!file || file.type !== "file") {
+            terminal.append("\nSource file not found.");
+          } else {
+            currentDir.children.push({ ...file, name: dest });
+          }
+          break;
+        }
+        case "ln": {
+          const [target, link] = args;
+          const file = findEntry(target);
+          if (!file) {
+            terminal.append("\nTarget not found.");
+          } else {
+            currentDir.children.push({ ...file, name: link });
+          }
+          break;
+        }
+        case "uname": {
+          terminal.append("\nLinux fakeOS 1.0.0 x86_64");
+          break;
+        }
+        case "whoami": {
+          terminal.append("\nuser");
           break;
         }
         default:
@@ -177,8 +362,8 @@
       }
     }
 
-    // Init
     terminal.append("Welcome to the Linux Terminal Simulator! Type 'help' for a list of commands.\n");
+    ensureBinDirectory();
     renderPrompt();
   </script>
 </body>
