@@ -450,14 +450,49 @@
           }
           break;
         }
-        case "bash": {
-          const script = cmd.split("\n").slice(1).join("\n");
-          const lines = script.split("\n");
-          for (let line of lines) {
-            if (line.trim()) executeCommand(line.trim());
+      case "bash": {
+        const modal = document.createElement("div");
+        modal.className = "modal";
+        
+        const textarea = document.createElement("textarea");
+        textarea.placeholder = "Entrez votre script bash ici...";
+        textarea.style.flex = "1";
+        textarea.style.background = "#000";
+        textarea.style.color = "#0f0";
+        textarea.style.border = "1px solid #0f0";
+        textarea.style.padding = "1rem";
+        textarea.style.fontFamily = "monospace";
+        textarea.style.fontSize = "1rem";
+        
+        const runButton = document.createElement("button");
+        runButton.textContent = "Exécuter";
+        runButton.style.background = "#0f0";
+        runButton.style.color = "#000";
+        runButton.style.fontWeight = "bold";
+        runButton.style.border = "none";
+        runButton.style.padding = "0.5rem";
+        runButton.style.cursor = "pointer";
+        
+        runButton.onclick = () => {
+          const script = textarea.value.trim();
+          if (script) {
+            const lines = script.split("\n").map(line => line.trim());
+            lines.forEach(line => {
+              if (line) {
+                executeCommand(line);
+              }
+            });
           }
-          break;
-        }
+          modal.remove();
+        };
+        
+        modal.appendChild(textarea);
+        modal.appendChild(runButton);
+        document.body.appendChild(modal);
+        
+        break;
+      }
+
         case "whoami": {
           terminal.append("user" + userNumber + "@gibslinux");
           break;
