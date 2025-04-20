@@ -78,6 +78,7 @@
     };
 
     const defaultTextColor = "#0f0";
+    document.body.style.color = defaultTextColor;
     const colorMap = {
       black: "#000000",
       white: "#ffffff",
@@ -142,7 +143,6 @@
       lightsteelblue: "#b0c4de"
     };
 
-
     function getCurrentDir() {
       let dir = fileSystem;
       for (let i = 1; i < currentPath.length; i++) {
@@ -159,10 +159,10 @@
       const prompt = document.createElement("span");
       prompt.className = "prompt";
       prompt.textContent = `user@linuxgibs:${currentPath.join("/")}$`;
-      prompt.style.color = document.body.style.color;
+      prompt.style.color = document.body.style.color || defaultTextColor;
 
       const input = document.createElement("input");
-      input.style.color = document.body.style.color;
+      input.style.color = document.body.style.color || defaultTextColor;
       input.autofocus = true;
       input.addEventListener("keydown", handleCommand);
 
@@ -414,41 +414,42 @@
           terminal.append("\nSimulated output: no real permission system implemented.");
           break;
         }
-      case "color": {
-        const [scope, colorArg] = args;
-        const color = colorArg?.toLowerCase();
-      
-        if ((!scope && !color)|| !scope) {
-          terminal.append("\nUsage: color [text|bcg] [color]");
-          return;
-        }
-      
-        if (!colorMap[color]) {
-          terminal.append("\nInvalid color.");
-          return;
-        }
-      
-        if (scope === "text") {
-          document.body.style.color = colorMap[color];
-          terminal.append(`\nText color set to ${color}`);
-        } else if (scope === "bcg") {
-          document.body.style.backgroundColor = colorMap[color];
-          terminal.append(`\nBackground color set to ${color}`);
-        if (scope === "list") {
+        case "color": {
+          const [scope, colorArg] = args;
+          const color = colorArg?.toLowerCase();
+
+          if ((!scope && !color)|| !scope) {
+            terminal.append("\nUsage: color [text|bcg] [color]");
+            return;
+          }
+
+          if (scope === "list") {
             terminal.append("\nAvailable colors:");
             Object.entries(colorMap).forEach(([name, val]) => {
               const span = document.createElement("div");
               span.textContent = name;
               span.style.color = val;
               terminal.appendChild(span);
-              });
-              return;
-            } else {
-              terminal.append("\nInvalid scope. Use 'text' or 'bcg'.");
-            }
-        break;
-      }
+            });
+            return;
+          }
 
+          if (!colorMap[color]) {
+            terminal.append("\nInvalid color.");
+            return;
+          }
+
+          if (scope === "text") {
+            document.body.style.color = colorMap[color];
+            terminal.append(`\nText color set to ${color}`);
+          } else if (scope === "bcg") {
+            document.body.style.backgroundColor = colorMap[color];
+            terminal.append(`\nBackground color set to ${color}`);
+          } else {
+            terminal.append("\nInvalid scope. Use 'text' or 'bcg'.");
+          }
+          break;
+        }
         case "bash": {
           const script = cmd.split("\n").slice(1).join("\n");
           const lines = script.split("\n");
@@ -459,7 +460,7 @@
         }
         case "whoami": {
           terminal.append("user" + userNumber + "@gibslinux");
-          break; 
+          break;
         }
         default:
           terminal.append("\nCommand not found. Type help for more informations about commands.");
