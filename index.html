@@ -418,7 +418,7 @@
         const [scope, colorArg] = args;
         const color = colorArg?.toLowerCase();
       
-        if (!scope || !color) {
+        if ((!scope && !color)|| !scope) {
           terminal.append("\nUsage: color [text|bcg] [color]");
           return;
         }
