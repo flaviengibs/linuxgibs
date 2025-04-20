@@ -363,26 +363,33 @@
           terminal.append("\nSimulated output: no real permission system implemented.");
           break;
         }
-        case "color": {
-          const color = args[0]?.toLowerCase();
-          if (color) {
-            if (colorMap[color]) {
-              document.body.style.color = colorMap[color];
-              terminal.append(`\nText color set to ${color}`);
-            } else {
-              terminal.append("\nInvalid color.");
-            }
-          } else {
-            terminal.append("\nAvailable colors:\n" + Object.entries(colorMap).map(([name, val]) => `%c${name}`).join("\n"));
-            Object.entries(colorMap).forEach(([name, val]) => {
-              const span = document.createElement("div");
-              span.textContent = name;
-              span.style.color = val;
-              terminal.appendChild(span);
-            });
-          }
-          break;
+      case "color": {
+        const [scope, colorArg] = args;
+        const color = colorArg?.toLowerCase();
+      
+        if (!scope || !color) {
+          terminal.append("\nUsage: color [text|bcg] [color]");
+          return;
         }
+      
+        if (!colorMap[color]) {
+          terminal.append("\nInvalid color.");
+          return;
+        }
+      
+        if (scope === "text") {
+          document.body.style.color = colorMap[color];
+          terminal.append(`\nText color set to ${color}`);
+        } else if (scope === "bcg") {
+          document.body.style.backgroundColor = colorMap[color];
+          terminal.append(`\nBackground color set to ${color}`);
+        } else {
+          terminal.append("\nInvalid scope. Use 'text' or 'bcg'.");
+        }
+      
+        break;
+      }
+
         case "bash": {
           const script = cmd.split("\n").slice(1).join("\n");
           const lines = script.split("\n");
