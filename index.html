@@ -79,18 +79,69 @@
 
     const defaultTextColor = "#0f0";
     const colorMap = {
-      green: "#0f0",
-      red: "#f00",
-      yellow: "#ff0",
-      blue: "#00f",
-      white: "#fff",
-      cyan: "#0ff",
-      magenta: "#f0f",
-      orange: "orange",
-      gray: "gray",
-      lime: "lime",
-      pink: "pink"
+      black: "#000000",
+      white: "#ffffff",
+      red: "#ff0000",
+      green: "#00ff00",
+      blue: "#0000ff",
+      yellow: "#ffff00",
+      cyan: "#00ffff",
+      magenta: "#ff00ff",
+      gray: "#808080",
+      grey: "#808080",
+      darkgray: "#a9a9a9",
+      darkgrey: "#a9a9a9",
+      lightgray: "#d3d3d3",
+      lightgrey: "#d3d3d3",
+      orange: "#ffa500",
+      pink: "#ffc0cb",
+      hotpink: "#ff69b4",
+      deeppink: "#ff1493",
+      coral: "#ff7f50",
+      tomato: "#ff6347",
+      salmon: "#fa8072",
+      gold: "#ffd700",
+      khaki: "#f0e68c",
+      beige: "#f5f5dc",
+      chocolate: "#d2691e",
+      brown: "#a52a2a",
+      maroon: "#800000",
+      purple: "#800080",
+      violet: "#ee82ee",
+      indigo: "#4b0082",
+      plum: "#dda0dd",
+      orchid: "#da70d6",
+      lavender: "#e6e6fa",
+      midnightblue: "#191970",
+      navy: "#000080",
+      royalblue: "#4169e1",
+      dodgerblue: "#1e90ff",
+      skyblue: "#87ceeb",
+      deepskyblue: "#00bfff",
+      lightblue: "#add8e6",
+      turquoise: "#40e0d0",
+      teal: "#008080",
+      aquamarine: "#7fffd4",
+      lime: "#00ff00",
+      chartreuse: "#7fff00",
+      lawngreen: "#7cfc00",
+      springgreen: "#00ff7f",
+      mediumspringgreen: "#00fa9a",
+      seagreen: "#2e8b57",
+      forestgreen: "#228b22",
+      olive: "#808000",
+      darkgreen: "#006400",
+      darkred: "#8b0000",
+      crimson: "#dc143c",
+      firebrick: "#b22222",
+      orangered: "#ff4500",
+      sienna: "#a0522d",
+      slategray: "#708090",
+      lightslategray: "#778899",
+      steelblue: "#4682b4",
+      lightsteelblue: "#b0c4de"
     };
+
 
     function getCurrentDir() {
       let dir = fileSystem;
@@ -300,7 +351,7 @@
           break;
         }
         case "help": {
-          terminal.append("\nCommands: ls, pwd, cd, mkdir, rmdir, touch, cat, nano, echo >> file.txt, rm, tree, color, clear, help, grep, find, head, tail, wc, chmod, chown, bash");
+          terminal.append("\nCommands: ls, pwd, cd, mkdir, rmdir, touch, cat, nano, echo >> file.txt, rm, tree, color [text|bcg|list] [color], clear, help, grep, find, head, tail, wc, chmod, chown, bash");
           break;
         }
         case "clear": {
@@ -383,10 +434,18 @@
         } else if (scope === "bcg") {
           document.body.style.backgroundColor = colorMap[color];
           terminal.append(`\nBackground color set to ${color}`);
-        } else {
-          terminal.append("\nInvalid scope. Use 'text' or 'bcg'.");
-        }
-      
+        if (scope === "list") {
+            terminal.append("\nAvailable colors:");
+            Object.entries(colorMap).forEach(([name, val]) => {
+              const span = document.createElement("div");
+              span.textContent = name;
+              span.style.color = val;
+              terminal.appendChild(span);
+              });
+              return;
+            } else {
+              terminal.append("\nInvalid scope. Use 'text' or 'bcg'.");
+            }
         break;
       }
 
