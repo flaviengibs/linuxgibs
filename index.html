@@ -68,6 +68,7 @@
   <div id="terminal"></div>
   <script>
     const terminal = document.getElementById("terminal");
+    const userNumber = Math.floor(Math.random() * 10000);
     const MAX_FILE_SIZE = 5 * 1024 * 1024;
     let currentPath = ["/"];
     let fileSystem = {
@@ -84,7 +85,11 @@
       blue: "#00f",
       white: "#fff",
       cyan: "#0ff",
-      magenta: "#f0f"
+      magenta: "#f0f",
+      orange: "orange",
+      gray: "gray",
+      lime: "lime",
+      pink: "pink"
     };
 
     function getCurrentDir() {
@@ -102,7 +107,7 @@
 
       const prompt = document.createElement("span");
       prompt.className = "prompt";
-      prompt.textContent = `user@fakeOS:${currentPath.join("/")}$`;
+      prompt.textContent = `user@linuxgibs:${currentPath.join("/")}$`;
       prompt.style.color = document.body.style.color;
 
       const input = document.createElement("input");
@@ -114,7 +119,6 @@
       line.appendChild(input);
       terminal.appendChild(line);
 
-      // Donne le focus sur l'input chaque fois que le prompt est affiché
       input.focus();
       terminal.scrollTop = terminal.scrollHeight;
     }
@@ -123,7 +127,7 @@
       if (e.key === "Enter") {
         const input = e.target;
         const commandText = input.value.trim();
-        if (commandText === "") return;  // Empêche d'exécuter une commande vide
+        if (commandText === "") return;
 
         const output = document.createElement("div");
         output.textContent = `\n$ ${commandText}`;
@@ -131,8 +135,8 @@
 
         executeCommand(commandText);
 
-        input.disabled = true; // Désactive le champ d'entrée une fois la commande exécutée
-        renderPrompt(); // Affiche un nouveau prompt
+        input.disabled = true;
+        renderPrompt();
       }
     }
 
@@ -295,39 +299,104 @@
           terminal.append("\n" + buildTree(getCurrentDir()));
           break;
         }
-        case "color": {
-          const color = args[0]?.toLowerCase();
-          if (colorMap[color]) {
-            document.body.style.color = colorMap[color];
-            terminal.append(`\nText color set to ${color}`);
-          } else {
-            terminal.append("\nInvalid color. Available: " + Object.keys(colorMap).join(", "));
-          }
+        case "help": {
+          terminal.append("\nCommands: ls, pwd, cd, mkdir, rmdir, touch, cat, nano, echo >> file.txt, rm, tree, color, clear, help, grep, find, head, tail, wc, chmod, chown, bash");
           break;
         }
         case "clear": {
           terminal.innerHTML = "";
           break;
         }
-        case "help": {
-          terminal.append("\nCommands: ls, pwd, cd, mkdir, rmdir, touch, cat, nano, echo >> file.txt, rm, tree, color, clear, help");
+        case "grep": {
+          const [word, fileName] = args;
+          const file = findEntry(fileName, "file");
+          if (file) {
+            const lines = file.content.split("\n").filter(l => l.includes(word));
+            terminal.append("\n" + lines.join("\n"));
+          } else {
+            terminal.append("\nFile not found.");
+          }
           break;
         }
-        case "mv":
-        case "cp":
-        case "ln":
-        case "less":
-        case "man":
-        case "uname": {
-          simulateCommand(command, "Linux fakeOS 1.0.0 x86_64");
+        case "find": {
+          const name = args[0];
+          function search(dir, prefix = "") {
+            let results = [];
+            for (let item of dir.children) {
+              const path = prefix + "/" + item.name;
+              if (item.name.includes(name)) results.push(path);
+              if (item.type === "dir") {
+                results = results.concat(search(item, path));
+              }
+            }
+            return results;
+          }
+          terminal.append("\n" + search(fileSystem).join("\n"));
+          break;
+        }
+        case "head":
+        case "tail": {
+          const name = args[0];
+          const file = findEntry(name, "file");
+          if (file) {
+            const lines = file.content.split("\n");
+            const selected = command === "head" ? lines.slice(0, 10) : lines.slice(-10);
+            terminal.append("\n" + selected.join("\n"));
+          } else {
+            terminal.append("\nFile not found.");
+          }
+          break;
+        }
+        case "wc": {
+          const file = findEntry(args[0], "file");
+          if (file) {
+            const lines = file.content.split("\n");
+            const words = file.content.split(/\s+/).filter(Boolean);
+            terminal.append(`\n${lines.length} lines, ${words.length} words, ${file.content.length} chars`);
+          } else {
+            terminal.append("\nFile not found.");
+          }
+          break;
+        }
+        case "chmod":
+        case "chown": {
+          terminal.append("\nSimulated output: no real permission system implemented.");
+          break;
+        }
+        case "color": {
+          const color = args[0]?.toLowerCase();
+          if (color) {
+            if (colorMap[color]) {
+              document.body.style.color = colorMap[color];
+              terminal.append(`\nText color set to ${color}`);
+            } else {
+              terminal.append("\nInvalid color.");
+            }
+          } else {
+            terminal.append("\nAvailable colors:\n" + Object.entries(colorMap).map(([name, val]) => `%c${name}`).join("\n"));
+            Object.entries(colorMap).forEach(([name, val]) => {
+              const span = document.createElement("div");
+              span.textContent = name;
+              span.style.color = val;
+              terminal.appendChild(span);
+            });
+          }
+          break;
+        }
+        case "bash": {
+          const script = cmd.split("\n").slice(1).join("\n");
+          const lines = script.split("\n");
+          for (let line of lines) {
+            if (line.trim()) executeCommand(line.trim());
+          }
           break;
         }
         case "whoami": {
-          simulateCommand(command, "user");
-          break;
+          terminal.appen("user" + userNumber + "@gibslinux");
+          break; 
         }
         default:
-          terminal.append("\nCommand not found.");
+          terminal.append("\nCommand not found. Type help for more informations about commands.");
       }
     }
 
@@ -336,3 +405,4 @@
   </script>
 </body>
 </html>
+
