@@ -497,6 +497,22 @@
           terminal.append("user" + userNumber + "@gibslinux");
           break;
         }
+        case "make": {
+          if (args.join(" ") === "me a sandwich") {
+            terminal.append("\nWhat? Make it yourself.");
+          } else {
+            simulateCommand(cmd);
+          }
+          break;
+        }
+        case "sudo": {
+          if (args.join(" ") === "make me a sandwich") {
+            terminal.append("\nOkay. 🥪");
+          } else {
+            terminal.append("\nNice try. You’re not root here.");
+          }
+          break;
+        }
        case "license": {
           const licenseText = `
           MIT License
